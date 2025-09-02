@@ -12,8 +12,11 @@ from dateutil import parser as dtparser
 from pathlib import Path
 import os
 from uuid import uuid4
+from fastapi import HTTPException
+import httpx
 
 from packages.schemas.store import get_feature_collection
+from packages.schemas import store
 from packages.agents.chat_graph import run_chat
 from packages.feeds.sources import (
     fetch_usgs_quakes_geojson, fetch_nws_alerts_geojson,
@@ -162,18 +165,26 @@ def _is_recent(iso: str | None, max_age_hours: int) -> bool:
     return (datetime.now(timezone.utc) - t).total_seconds() <= max_age_hours * 3600
 
 async def asyncio_gather_feeds():
-    # Parallel fetch of all feeds
     usgs_task = fetch_usgs_quakes_geojson()
     nws_task = fetch_nws_alerts_geojson()
     eonet_task = fetch_eonet_events_geojson()
     firms_task = fetch_firms_hotspots_geojson()
-    usgs, nws, eonet, firms = await asyncio.gather(usgs_task, nws_task, eonet_task, firms_task)
+
+    results = await asyncio.gather(
+        usgs_task, nws_task, eonet_task, firms_task,
+        return_exceptions=True
+    )
+
+    def ok(x):
+        return {"features": []} if isinstance(x, Exception) or not x else x
+
     return {
-        "usgs": usgs or {"features": []},
-        "nws": nws or {"features": []},
-        "eonet": eonet or {"features": []},
-        "firms": firms or {"features": []},
+        "usgs": ok(results[0]),
+        "nws": ok(results[1]),
+        "eonet": ok(results[2]),
+        "firms": ok(results[3]),
     }
+
 
 @app.get("/health")
 def health():
@@ -188,9 +199,22 @@ async def usgs():
 async def nws():
     return {"data": await fetch_nws_alerts_geojson()}
 
+from fastapi import HTTPException
+import httpx
+
 @app.get("/feeds/eonet")
 async def eonet():
-    return {"data": await fetch_eonet_events_geojson()}
+    try:
+        data = await fetch_eonet_events_geojson()
+        return {"data": data}
+    except httpx.ConnectTimeout:
+        # upstream unreachable before TCP connect -> 504 makes intent clear
+        raise HTTPException(status_code=504, detail="EONET upstream connect timeout")
+    except httpx.ReadTimeout:
+        raise HTTPException(status_code=504, detail="EONET upstream read timeout")
+    except httpx.HTTPError as e:
+        # any other HTTPX issue -> 502 Bad Gateway
+        raise HTTPException(status_code=502, detail=f"EONET upstream error: {e.__class__.__name__}")
 
 @app.get("/feeds/firms")
 async def firms():
@@ -315,3 +339,10 @@ async def upload_photo(request: Request, file: UploadFile = File(...)):
     base = str(request.base_url).rstrip("/")
     url = f"{base}/uploads/{name}"
     return {"ok": True, "url": url, "path": f"/uploads/{name}"}
+
+@app.post("/reports/clear")
+def clear_reports_api():
+    """
+    Deletes all user reports from the database.
+    """
+    return store.clear_reports()

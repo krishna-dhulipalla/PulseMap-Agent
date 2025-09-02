@@ -75,3 +75,9 @@ def find_reports_near(lat: float, lon: float, radius_km: float = 10.0, limit: in
     cand.sort(key=lambda x: x[0])
     out = [_row_to_feature(r) for _, r in cand[:max(1, limit)]]
     return out
+
+def clear_reports() -> dict[str, any]:
+    """Delete all rows from the reports table."""
+    _CONN.execute("DELETE FROM reports")
+    _CONN.commit()
+    return {"ok": True, "message": "All reports cleared."}

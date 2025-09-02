@@ -18,7 +18,7 @@ from packages.agents.classifier import classify_report_text, CATEGORY_TO_ICON
 
 from langgraph.checkpoint.sqlite import SqliteSaver 
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Ensure data dir exists
 Path("data").mkdir(exist_ok=True)
@@ -41,16 +41,17 @@ def add_report_tool(
     """
     # 1) classify the text
     cls = classify_report_text(text or "User report")
-    emoji = CATEGORY_TO_ICON.get(cls.category, "📝")
-
+    icon_name = CATEGORY_TO_ICON.get(cls.category, "info")
     # 2) enrich properties; keep original text for context
     props = {
         "title": cls.label,
+        "text": cls.description or text.strip(),   # one-line description
         "category": cls.category,
-        "emoji": emoji,
+        "emoji": icon_name,
         "severity": cls.severity,
         "confidence": cls.confidence,
         "source": "user",
+        "reported_at": datetime.now(timezone.utc).isoformat()
     }
     if photo_url:                      
         props["photo_url"] = photo_url
@@ -85,14 +86,34 @@ model = ChatOpenAI(
     streaming=True,   # fine even if you don't stream to the client yet
 ).bind_tools(TOOLS)
 
-SYSTEM_PROMPT = (
-    "You are PulseMap Agent. You help users add and find location-based reports.\n"
-    "- If the user is reporting an incident (e.g., 'flooded underpass here'), call add_report.\n"
-    "- If the user asks what's nearby or to list recent reports, call find_reports_near.\n"
-    "- If coordinates are not in the text but user_location is provided, USE THAT location and INCLUDE lat/lon in your tool call.\n"
-    "- If a photo URL is available in context, include it as add_report(photo_url=...).\n"   # <-- NEW
-    "- Keep answers to <= 2 sentences. After using a tool, briefly summarize what you did."
-)
+SYSTEM_PROMPT = """
+You are PulseMap Agent — a calm, friendly assistant inside a live community map.  
+You help people add reports and discover what’s happening around them.
+
+### What to do
+- If the user reports an incident (e.g. "flooded underpass here"), call `add_report(lat, lon, text, photo_url?)`.  
+- If the user asks about nearby updates (e.g. "what’s near me?", "any reports here?"), call `find_reports_near(lat, lon, radius_km=?, limit=?)`.  
+  • Default radius = 25 miles (~40 km). Default limit = 10.  
+- If no coordinates in the message but `user_location` is provided, use that.  
+- If a photo URL is available, pass it through.  
+
+### How to answer
+- Speak like a helpful neighbor, not a robot.  
+- Use plain text only. No **bold**, no numbered lists, no markdown tables.  
+- After a tool call, start with a quick recap then list items newest first using hyphen bullets.  
+  *“I checked within 25 miles of your location and found 3 updates.”*  
+For each item, one line like:
+  - 🔫 Gunshot — Severity: High; Confidence: 0.9; Time: 2h ago; Source: User; Photo: yes  
+- If nothing found:
+  - “I didn’t find anything within 25 miles in the last 48 hours. Want me to widen the search?”
+
+### Safety
+- Keep a supportive tone. Do not dramatize.  
+- End with situational advice when it makes sense (e.g. “Avoid driving through floodwater”).  
+- Only mention calling 911 if the report itself clearly describes an urgent danger.  
+- Never invent reports — summarize only what tools/feed data provide.  
+"""
+
 
 def _mk_messages(user_text: str, user_location: Optional[Dict[str, float]]) -> List[BaseMessage]:
     loc_hint = (

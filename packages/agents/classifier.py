@@ -6,44 +6,43 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
 
 class ReportClassification(BaseModel):
-    category: str = Field(..., description="taxonomy id like 'crime.gunshot', 'incident.medical', 'road.construction', 'help.ride', 'other.unknown'")
-    label: str = Field(..., description="short human title, e.g., 'Gunshots reported'")
+    category: str = Field(..., description="taxonomy id like 'crime.gunshot'")
+    label: str = Field(..., description="short human title, e.g. 'Gunshots reported'")
+    description: Optional[str] = Field(
+        None, description="one-sentence summary in plain English; no emojis"
+    )
     severity: Optional[str] = None
     confidence: float = Field(..., ge=0, le=1)
 
 CATEGORY_TO_ICON = {
-    "crime.gunshot": "gun",                # gun icon
-    "crime.robbery": "user-x",             # user-x icon (robber representation)
-    "crime.assault": "shield-alert",       # shield-alert for assault
-    "crime.suspicious": "alert-triangle",  # suspicious activity
-    "incident.missing_person": "user-search", # missing person
-    "incident.lost_item": "search",        # search icon
-    "incident.medical": "ambulance",       # ambulance
-    "incident.car_accident": "car",        # car icon
-    "road.blocked": "traffic-cone",        # traffic cone
-    "road.construction": "construction",   # construction icon
-    "help.general": "help-circle",         # help circle
-    "help.ride": "car-front",              # ride request
-    "other.unknown": "info",               # info
+    "crime.gunshot": "3d-gun",                # gun icon
+    "crime.robbery": "3d-robbery",             # user-x icon (robber representation)
+    "crime.sex_offender": "3d-sex",       # shield-alert for assault
+    "crime.suspicious": "3d-alert",  # suspicious activity
+    "incident.missing_person": "3d-user_search", # missing person
+    "incident.lost_item": "3d-search",        # search icon
+    "incident.medical": "3d-ambulance",       # ambulance
+    "incident.car_accident": "3d-car",        # car icon
+    "road.flood": "3d-flood",               # flood icon
+    "road.blocked": "3d-traffic",        # traffic cone
+    "road.construction": "3d-construction",   # construction icon
+    "help.general": "3d-help",         # help circle
+    "help.ride": "3d-ride",              # ride request
+    "other.unknown": "3d-info",               # info
 }
 
 SYSTEM = """You classify short community reports into a strict taxonomy.
-Return ONLY the fields in the schema. If unclear, choose other.unknown."""
+Return ONLY the fields in the schema. If unclear, choose other.unknown.
+- 'label' is a short human title (e.g., 'Gunshots reported').
+- 'description' is a single sentence, friendly and clear, no emojis, no markdown.
+"""
 
 # Use JSON strings in the few-shots so the model imitates JSON, not Python dicts
 EXAMPLES = [
-  {"input": "I heard gunshots near 5th and Pine!", 
-   "output_json": '{"category":"crime.gunshot","label":"Gunshots reported","severity":"high","confidence":0.9}'},
-  {"input": "Car crash blocking the left lane on I-66", 
-   "output_json": '{"category":"incident.car_accident","label":"Car accident","severity":"medium","confidence":0.85}'},
-  {"input": "Grand Ave closed for road work", 
-   "output_json": '{"category":"road.construction","label":"Road work","severity":"info","confidence":0.8}'},
-  {"input": "Need a ride from the mall to downtown", 
-   "output_json": '{"category":"help.ride","label":"Ride request","severity":"low","confidence":0.8}'},
-  {"input": "Someone’s bag lost near the library", 
-   "output_json": '{"category":"incident.lost_item","label":"Lost item","severity":"low","confidence":0.7}'},
-  {"input": "Not sure what happened, big police presence", 
-   "output_json": '{"category":"crime.suspicious","label":"Police activity","severity":"unknown","confidence":0.6}'},
+  {"input": "I heard gunshots near 5th and Pine!",
+   "output_json": '{"category":"crime.gunshot","label":"Gunshots reported","description":"Multiple shots heard near 5th and Pine.","severity":"high","confidence":0.9}'},
+  {"input": "Car crash blocking the left lane on I-66",
+   "output_json": '{"category":"incident.car_accident","label":"Car accident","description":"Crash reported blocking the left lane on I-66.","severity":"medium","confidence":0.85}'},
 ]
 
 example_block = ChatPromptTemplate.from_messages([
