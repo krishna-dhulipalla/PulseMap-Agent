@@ -1,10 +1,16 @@
+# Python
 __pycache__/
 *.pyc
-node_modules/
-ui/node_modules/
 
-.DS_Store
-*.log
+# Env
 .env
-/env
-/venv
+venv/
+.venv/
+
+# Data
+data/**
+!data/.gitkeep
+
+# Node
+web/node_modules/
+web/dist/
