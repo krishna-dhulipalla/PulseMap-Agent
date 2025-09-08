@@ -17,7 +17,8 @@ A lightweight, map‑first agent that blends **community reports** with **offici
   <img src="https://img.shields.io/badge/Google%20Maps-4285F4?style=for-the-badge&logo=googlemaps&logoColor=white" />
 </p>
 
-**▶ Watch the 2‑min demo:** https://vimeo.com/1114405956?share=copy#t=0
+**▶ Watch the 2‑min demo:** <br>
+[<img src="hero.png" alt="PulseMap Agent — 2-min demo" style="width:600px; height:400px">](https://vimeo.com/1114405956?share=copy#t=0)
 
 ---
 
