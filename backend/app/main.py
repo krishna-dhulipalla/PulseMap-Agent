@@ -23,7 +23,7 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory=str(settings.UPLOADS_DIR)), name="uploads")
 
 # Routers
-from .routers import chat, reports, feeds, uploads, geo, reactions  # noqa
+from .routers import chat, reports, feeds, uploads, geo, reactions, config  # noqa
 from .routers.feeds import updates as updates_router
 app.include_router(chat.router)
 app.include_router(reports.router)
@@ -32,6 +32,7 @@ app.include_router(updates_router)
 app.include_router(uploads.router)
 app.include_router(geo.router)
 app.include_router(reactions.router)
+app.include_router(config.router)
 
 if settings.FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=str(settings.FRONTEND_DIST), html=True), name="spa")
