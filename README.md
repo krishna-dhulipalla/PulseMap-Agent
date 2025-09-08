@@ -1,6 +1,6 @@
 # PulseMap Agent
 
-A lightweight, map‑first agent that blends **community reports** with **official hazard feeds** and simple **verify/clear** reactions — so neighborhoods can stay informed in seconds.
+A lightweight, map‑first agent that blends **community reports** with **official hazard feeds** and simple **verify/clear** reactions, so neighborhoods can stay informed in seconds.
 
 <p>
   <!-- Backend / Agents -->
