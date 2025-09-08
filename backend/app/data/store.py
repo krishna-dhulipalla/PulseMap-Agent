@@ -1,21 +1,13 @@
+# same content as your current store.py, just moved here
 from __future__ import annotations
 import json, sqlite3
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+from ..data.geo import haversine_km
 
-from ..config.settings import settings
-from .geo import haversine_km
-
-DB_PATH: Path = settings.REPORTS_DB
-# Create parent and touch the file so we fail here if unwritable
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-try:
-    DB_PATH.touch(exist_ok=True)
-except Exception as e:
-    raise RuntimeError(f"Cannot create DB file at {DB_PATH}: {e}")
-
-_CONN = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+Path("data").mkdir(exist_ok=True)
+_CONN = sqlite3.connect("data/pulsemaps_reports.db", check_same_thread=False)
 _CONN.execute("""
 CREATE TABLE IF NOT EXISTS reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,12 +30,25 @@ def _row_to_feature(row: tuple) -> Dict[str, Any]:
 
 def add_report(lat: float, lon: float, text: str = "User report", props: dict | None = None):
     created_at = datetime.now(timezone.utc).isoformat()
-    props_json = json.dumps(props or {})
-    _CONN.execute("INSERT INTO reports (lat, lon, text, props_json, created_at) VALUES (?,?,?,?,?)",
-                  (float(lat), float(lon), text, props_json, created_at))
+    props = dict(props or {})
+    props_json = json.dumps(props)
+    cur = _CONN.execute(
+        "INSERT INTO reports (lat, lon, text, props_json, created_at) VALUES (?,?,?,?,?)",
+        (float(lat), float(lon), text, props_json, created_at)
+    )
     _CONN.commit()
-    return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [float(lon), float(lat)]},
-            "properties": {"type": "user_report", "text": text, "reported_at": created_at, **(props or {})}}
+    rid = str(cur.lastrowid)  # ✅ new id
+
+    # include rid in the immediate response so the UI can show counts instantly
+    out_props = {"type": "user_report", "text": text, "reported_at": created_at, **props}
+    out_props.setdefault("rid", rid)
+    out_props.setdefault("id", rid)
+
+    return {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [float(lon), float(lat)]},
+        "properties": out_props,
+    }
 
 def get_feature_collection() -> Dict[str, Any]:
     cur = _CONN.execute("SELECT id, lat, lon, text, props_json, created_at FROM reports ORDER BY id DESC")
@@ -75,3 +80,21 @@ def clear_reports() -> dict[str, any]:
     _CONN.execute("DELETE FROM reports")
     _CONN.commit()
     return {"ok": True, "message": "All reports cleared."}
+
+def _row_to_feature(row: tuple) -> Dict[str, Any]:
+    _id, lat, lon, text, props_json, created_at = row
+    props = {"type": "user_report", "text": text, "reported_at": created_at}
+    if props_json:
+        try:
+            props.update(json.loads(props_json))
+        except Exception:
+            props["raw_props"] = props_json
+    # ✅ ensure a stable id is present on every returned feature
+    props.setdefault("rid", str(_id))
+    props.setdefault("id", str(_id))      # optional mirror
+    return {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [lon, lat]},
+        "properties": props,
+    }
+

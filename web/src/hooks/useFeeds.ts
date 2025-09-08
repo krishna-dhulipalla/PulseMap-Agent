@@ -85,9 +85,6 @@ export function useFeeds() {
 
       const firmsFC = normalizeFirms(d);
       setFirms(firmsFC);
-
-      console.log("FIRMS note:", (d && d._note) || firmsFC?._note || null);
-      console.log("FIRMS normalized:", firmsFC?.features?.length);
     })();
 
     return () => {

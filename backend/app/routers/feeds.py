@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Any, Dict, Optional
 from ..services.feeds import (
     fetch_usgs_quakes_geojson, fetch_nws_alerts_geojson,
-    eonet_geojson_points, firms_geojson_points,   # <-- use normalized point outputs
+    eonet_geojson_points, firms_geojson_points, 
     local_updates as _local_updates, global_updates as _global_updates
 )
 

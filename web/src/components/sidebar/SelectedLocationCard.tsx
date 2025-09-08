@@ -12,10 +12,12 @@ export default function SelectedLocationCard({
   selectedLL,
   selectedMeta,
   onClear,
+  reactionsById,
 }: {
   selectedLL: [number, number] | null;
   selectedMeta: SelectMeta | null;
   onClear: () => void;
+  reactionsById: Record<string, any>;
 }) {
   const photoSrc =
     selectedMeta?.raw?.photo_url ??
@@ -25,6 +27,11 @@ export default function SelectedLocationCard({
     (selectedMeta as any)?.photo_url ??
     (selectedMeta as any)?.photoUrl ??
     null;
+
+  const rid = selectedMeta?.rid || selectedMeta?.raw?.rid;
+  const rx = rid ? reactionsById[rid] : null;
+  const verifyCount = rx?.verify_count ?? 0;
+  const clearCount = rx?.clear_count ?? 0;
 
   const showEmoji =
     selectedMeta?.emoji && isEmoji(String(selectedMeta.emoji))
@@ -113,6 +120,11 @@ export default function SelectedLocationCard({
         ) : (
           <div className="locDetecting">Use search, 📍, or click the map.</div>
         )}
+        {rid ? (
+          <div className="text-xs muted">
+            Verified: {verifyCount} · Cleared: {clearCount}
+          </div>
+        ) : null}
 
         {photoSrc && (
           <div className="mt-2" style={{ maxHeight: 220, overflow: "auto" }}>

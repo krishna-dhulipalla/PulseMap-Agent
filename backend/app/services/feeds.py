@@ -52,6 +52,7 @@ def _report_to_update(f: Dict[str, Any]) -> Dict[str, Any]:
     p = f.get("properties", {}) or {}
     lat = f["geometry"]["coordinates"][1]
     lon = f["geometry"]["coordinates"][0]
+    rid = p.get("rid") or p.get("id") or p.get("_id") or p.get("uuid")
     return {
         "kind": "report",
         "title": p.get("title") or p.get("text") or "User report",
@@ -61,6 +62,7 @@ def _report_to_update(f: Dict[str, Any]) -> Dict[str, Any]:
         "severity": p.get("severity"),
         "sourceUrl": None,
         "raw": p,
+        "rid": rid, 
     }
 
 def _quake_to_update(f: Dict[str, Any]) -> Dict[str, Any] | None:

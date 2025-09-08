@@ -23,12 +23,20 @@ export type SelectMeta = {
   emoji?: string;
   category?: string;
   raw?: any;
+  id?: string;
+  rid?: string;
 };
 
 export type Message = {
   role: "user" | "assistant";
   text: string;
   image?: string;
+};
+
+export type ReactionInfo = {
+  verify_count: number;
+  clear_count: number;
+  me: { verified: boolean; cleared: boolean };
 };
 
 export type UpdateItem = {
@@ -40,4 +48,5 @@ export type UpdateItem = {
   lon: number;
   severity?: string | number;
   sourceUrl?: string;
+  rid?: string;
 };

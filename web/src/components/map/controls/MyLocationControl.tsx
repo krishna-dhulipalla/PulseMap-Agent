@@ -10,15 +10,33 @@ export default function MyLocationControl({
   const map = useMap();
   useEffect(() => {
     if (!map) return;
-    const btn = document.createElement("div");
-    btn.style.margin = "10px";
-    btn.innerHTML = `<button aria-label="My location" style="width:40px;height:40px;border-radius:50%;background:#fff;border:0;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:18px;">📍</button>`;
+    const btn = document.createElement("button");
+    btn.setAttribute("aria-label", "My location");
+    btn.style.width = "40px";
+    btn.style.height = "40px";
+    btn.style.borderRadius = "50%";
+    btn.style.background = "#fff";
+    btn.style.border = "0";
+    btn.style.cursor = "pointer";
+    btn.style.boxShadow = "0 1px 4px rgba(0,0,0,.3)";
+    btn.style.display = "flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.style.fontSize = "18px";
+    btn.style.marginRight = "10px";
+    btn.textContent = "📌";
+
     map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(btn);
 
+    let locating = false;
     const click = () => {
+      if (locating) return;
+      locating = true;
+
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          locating = false;
           const ll: [number, number] = [
             pos.coords.latitude,
             pos.coords.longitude,
@@ -27,10 +45,13 @@ export default function MyLocationControl({
           map.setZoom(13);
           onLocated(ll, { kind: "mylocation", title: "My location" });
         },
-        undefined,
+        () => {
+          locating = false;
+        },
         { enableHighAccuracy: true }
       );
     };
+
     btn.addEventListener("click", click);
 
     return () => {

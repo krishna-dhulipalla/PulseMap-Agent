@@ -20,6 +20,8 @@ export default function UpdatesPanel({
   loadingGlobal,
   selectedLL,
   onView,
+  reactionsById,
+  onReact,
 }: {
   activeTab: "local" | "global";
   setActiveTab: (t: "local" | "global") => void;
@@ -29,6 +31,8 @@ export default function UpdatesPanel({
   loadingGlobal: boolean;
   selectedLL: [number, number] | null;
   onView: (u: UpdateItem) => void;
+  reactionsById: Record<string, any>;
+  onReact: (rid: string, action: "verify" | "clear") => void;
 }) {
   const renderList = (
     list: UpdateItem[],
@@ -40,9 +44,13 @@ export default function UpdatesPanel({
       {!loading && list.length === 0 && <div className="muted">{emptyMsg}</div>}
       {!loading &&
         list.map((u, i) => {
-          // DEBUG: inspect each item
-          // eslint-disable-next-line no-console
-          console.debug("[UpdatesPanel] item:", u);
+          // get reaction info
+          const rid = u.rid;
+          const rx = rid ? reactionsById[rid] : null;
+          const meVerified = !!rx?.me?.verified;
+          const meCleared = !!rx?.me?.cleared;
+          const verifyCount = rx?.verify_count ?? 0;
+          const clearCount = rx?.clear_count ?? 0;
 
           const showEmoji =
             u.emoji && isEmoji(String(u.emoji)) ? u.emoji : null;
@@ -71,6 +79,28 @@ export default function UpdatesPanel({
                     </div>
                   )}
                 </div>
+                {u.kind === "report" && rid ? (
+                  <>
+                    <button
+                      className={`btn btn-ghost ${
+                        meVerified ? "btn-active" : ""
+                      }`}
+                      onClick={() => onReact(rid, "verify")}
+                      title="Others also saw/heard this"
+                    >
+                      {meVerified ? "Verified" : "Verify"} · {verifyCount}
+                    </button>
+                    <button
+                      className={`btn btn-ghost ${
+                        meCleared ? "btn-active" : ""
+                      }`}
+                      onClick={() => onReact(rid, "clear")}
+                      title="Issue is cleared/resolved"
+                    >
+                      {meCleared ? "Cleared" : "Clear"} · {clearCount}
+                    </button>
+                  </>
+                ) : null}
                 <button className="btn btn-ghost" onClick={() => onView(u)}>
                   View
                 </button>
